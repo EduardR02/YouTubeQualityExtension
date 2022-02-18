@@ -1,6 +1,6 @@
 {
-	"name": "Yoututbe Quality Manager",
-	"version": "1.0.1",
+	"name": "Youtube Quality Manager",
+	"version": "1.0.2",
 	"manifest_version": 2,
 	"content_scripts": [
 		{

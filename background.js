@@ -80,6 +80,22 @@ function surprise_receive() {
     let url;
     // sounds are not included, so set your url here like this:
     // url = chrome.runtime.getURL("path_to_file");
+    switch (Math.floor(Math.random() * 4)) {
+        case 0:
+            url = chrome.runtime.getURL("sounds/fart_meme_1.mp3");
+            break;
+        case 1:
+            url = chrome.runtime.getURL("sounds/knock_sound.mp3");
+            break;
+        case 2:
+            url = chrome.runtime.getURL("sounds/reverb_fart_1.mp3");
+            break;
+        case 3:
+            url = chrome.runtime.getURL("sounds/vine_boom.mp3");
+            break;
+        default:
+            url = null;
+    }
     if (url) {
         let myAudio = new Audio(url);
         myAudio.play();

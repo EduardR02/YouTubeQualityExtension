@@ -27,12 +27,25 @@ function injectStuff(quality) {
 
 
 function change_quality_help(quality) {
-    let player = document.querySelector('.html5-video-player');
+    let player = document.querySelectorAll('.html5-video-player');
+    // bug where there are multiple players,
+    // but the first one is a preview player (when you hover over a video) and is very limited,
+    // second one is the one that is the actual video
+    if (player.length == 0) {
+        console.log("No player found, quality could not be changed");
+        return;
+    }
+    player = player[player.length - 1];
     if (quality) {
         player.setPlaybackQualityRange(quality);
         if (player.getPlayerState() === 5) {
             let my_listener_func = function (data) {
-                player = document.querySelector('.html5-video-player');
+                player = document.querySelectorAll('.html5-video-player');
+                if (player.length == 0) {
+                    console.log("No player found, quality could not be changed");
+                    return;
+                }
+                player = player[player.length - 1];
                 // technically doesn't need to timeout, but if it doesn't then lower qualities
                 // have enough time to preload and will run on lower quality until buffer is played.
                 // This (probably) ensures immediate change, as this overrides the preload because it doesnt
