@@ -16,6 +16,7 @@ function run_on_init_p_new() {
 
 function go_back() {
     setTimeout(function() {window.location.href="popup.html";}, 200);
+    return true;
 }
 
 function change_quality(quality) {
@@ -27,4 +28,5 @@ function change_quality(quality) {
         chrome.runtime.sendMessage({message: "quality_changed"});
 	});
     go_back();
+    return true;
 }

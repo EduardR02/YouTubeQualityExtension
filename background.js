@@ -2,47 +2,40 @@ chrome.tabs.onUpdated.addListener(tab_updated);
 chrome.runtime.onMessage.addListener(got_message_background);
 chrome.runtime.onInstalled.addListener(when_installed);
 
-var current_url = "";
-var youtube_link = "youtube.com/watch";
 
+const youtube_link = "youtube.com/watch";
 
 function tab_updated(tabId, changeInfo, tab) {
     if (changeInfo.status === "loading" && changeInfo.url) {
-        current_url = changeInfo.url;
+        setCurrentUrl(changeInfo.url);
     }
     else if (changeInfo.status === "complete") {
-        if (current_url) {
-            if (current_url.includes(youtube_link)) {
-                chrome.tabs.sendMessage(tabId, {
-                    message: 'change_needed',
-                    url: current_url
-                });
-                console.log("message on new video sent");
-            }
-        }
-    }
-}
-
-function got_message_background(request, sender, sendResponse) {
-    if (request.message === "play_sound") {
-        surprise_receive();
-    }
-    else {
-        chrome.tabs.query({active: true, lastFocusedWindow: true}, tabs => {
-            if (!tabs) return;
-            current_url = tabs[0].url;
-            let tabId = tabs[0].id;
-            if ((request.message === "turned_on" || request.message === "quality_changed")
-            && current_url.includes(youtube_link)) {
-                chrome.tabs.sendMessage(tabId, {
-                    message: 'change_needed',
-                    url: current_url
-                });
-                console.log("message on button click sent");
+        chrome.storage.local.get("current_url", function(res_dict) {
+            current_url = res_dict.current_url;
+            if (current_url && current_url.includes(youtube_link)) {
+                change_quality(tabId);
             }
         });
     }
+    return true;
 }
+
+function got_message_background(request, sender, sendResponse) {
+    if (request.message === "quality_changed" || request.message === "turned_on") {
+        // update quality on any button press except suprrise button
+        chrome.tabs.query({active: true, lastFocusedWindow: true}, tabs => {
+            if (!tabs || !tabs[0]) return;
+            current_url = tabs[0].url;
+            setCurrentUrl(current_url);
+            let tabId = tabs[0].id;
+            if (current_url.includes(youtube_link)) {
+                change_quality(tabId);
+            }
+        });
+    }
+    return true;
+}
+
 
 function when_installed(details) {
     let quality = "hd1080"
@@ -69,40 +62,93 @@ function when_installed(details) {
     });
     
     /*
-    if (details.reason === "install") {
+    if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
         let on_install_tab = "popup_new.html";
         chrome.tabs.create({ url: on_install_tab });
     }
     */
+   return true;
 }
 
-function surprise_receive() {
-    let url;
-    // sounds are not included, so set your url here like this:
-    // url = chrome.runtime.getURL("path_to_file");
-    switch (Math.floor(Math.random() * 4)) {
-        case 0:
-            url = chrome.runtime.getURL("sounds/fart_meme_1.mp3");
-            break;
-        case 1:
-            url = chrome.runtime.getURL("sounds/knock_sound.mp3");
-            break;
-        case 2:
-            url = chrome.runtime.getURL("sounds/reverb_fart_1.mp3");
-            break;
-        case 3:
-            url = chrome.runtime.getURL("sounds/vine_boom.mp3");
-            break;
-        default:
-            url = null;
+
+function setCurrentUrl(url) {
+    chrome.storage.local.set({ "current_url": url });
+}
+
+function injectStuff_mv3(quality, tabId) {
+    chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        func: change_quality_help,
+        args: [quality],
+        world: "MAIN"
+    },
+    () => {});
+}
+
+
+function change_quality_help(quality) {
+    let players = document.querySelectorAll('.html5-video-player');
+    // bug where there are multiple players,
+    // but the first one is a preview player (when you hover over a video) and is very limited,
+    // second one is the one that is the actual video
+    if (players.length === 0) {
+        console.log("No player found, quality could not be changed");
+        return;
     }
-    if (url) {
-        let myAudio = new Audio(url);
-        myAudio.play();
-        console.log("hehe");
+    // instead of only the sedond one, we want to change all of the qualities, so future changes are not needed
+    if (quality) {
+        for (let player of players) {
+            player.setPlaybackQualityRange(quality);
+            if (player.getPlayerState() === 5) {
+                let my_listener_func = function (data) {
+                    // technically doesn't need to timeout, but if it doesn't then lower qualities
+                    // have enough time to preload and will run on lower quality until buffer is played.
+                    // This (probably) ensures immediate change, as this overrides the preload because it doesnt
+                    // fire on exact time of loading.
+                    setTimeout(function () {player.setPlaybackQualityRange(quality);}, 50);
+                    console.log("Quality changed (after retrying) to: " + quality);
+                    player.removeEventListener("onStateChange", my_listener_func);
+                    my_listener_func = function () {};
+                    return true;
+                };
+                player.addEventListener("onStateChange", my_listener_func);
+            }
+            else {
+                //player.playVideo();
+                console.log("Quality successfully changed to: " + quality);
+            }
+        }
     }
     else {
-        console.log("Failed to play sound");
+        console.log("Error: Could not set quality");
     }
 }
 
+function change_quality(tabId) {
+    get_status_on_off(function(isOn) {
+        if (isOn) {
+            get_quality(function(quality) {
+                // injecting change_quality_help here
+                //injectStuff(quality);
+                injectStuff_mv3(quality, tabId);
+            });
+        }
+        else {
+            console.log("Extension is OFF");
+        }
+    });
+}
+
+function get_quality(callback) {
+    chrome.storage.sync.get('Quality', function(res) {
+        console.log('Value of Quality is ' + res.Quality);
+        callback(res.Quality);
+    });
+}
+
+function get_status_on_off(callback) {
+    chrome.storage.sync.get('OnOffToggle', function(res) {
+        console.log('Value of OnOffToggle is ' + res.OnOffToggle);
+        callback(res.OnOffToggle);
+    });
+}

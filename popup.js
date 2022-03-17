@@ -1,4 +1,4 @@
-
+let sound_urls = ["sounds/fart_meme_1.mp3", "sounds/knock_sound.mp3", "sounds/reverb_fart_1.mp3", "sounds/vine_boom.mp3"];
 run_on_init();
 
 
@@ -8,12 +8,14 @@ function run_on_init() {
 		switch (buttons[i].id) {
 			case "buttonON":
 				buttons[i].addEventListener("click", function() {
-					turn_on_off(true);
+					set_on_off(true);
+					return true;
 				});
 				break;
 			case "buttonOFF":
 				buttons[i].addEventListener("click", function() {
-					turn_on_off(false);
+					set_on_off(false);
+					return true;
 					});
 				break;
 			case "buttonQ":
@@ -28,8 +30,6 @@ function run_on_init() {
 	
 	get_on_off(function(isOn) {update_colors(isOn)});
 }
-
-
 
 
 function update_colors(isOn) {
@@ -49,7 +49,7 @@ function update_colors(isOn) {
 }
 
 
-function turn_on_off (isOn) {
+function set_on_off (isOn) {
 	if (isOn) {
 		chrome.runtime.sendMessage({message: "turned_on"});
 	}
@@ -64,6 +64,7 @@ function set_quality () {
 		if (!isOn) return;
 		setTimeout(function() {window.location.href="popup_new.html";}, 200);
 	});
+	return true;
 }
 
 function get_on_off(callback) {
@@ -77,7 +78,21 @@ function get_on_off(callback) {
 function surprise () {
 	get_on_off(function(isOn) {
 		if (!isOn) return;
-		chrome.runtime.sendMessage({message: "play_sound"})
+		surprise_receive();
 	});
+	return true;
+}
+
+function surprise_receive() {
+    // url = chrome.runtime.getURL("path_to_file");
+    let url = chrome.runtime.getURL(sound_urls[Math.floor(Math.random() * sound_urls.length)]);
+    if (url) {
+        let myAudio = new Audio(url);
+        myAudio.play();
+        console.log("hehe");
+    }
+    else {
+        console.log("Failed to play sound");
+    }
 }
 
