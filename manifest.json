@@ -1,6 +1,6 @@
 {
 	"name": "Youtube Quality Manager",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"manifest_version": 3,
 	"icons": { "16": "icons/icon16.png",
            "48": "icons/icon48.png",

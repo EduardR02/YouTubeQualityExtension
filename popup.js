@@ -6,17 +6,13 @@ function run_on_init() {
 	let buttons = document.querySelectorAll("button");
 	for (let i = 0; i < buttons.length; i++) {
 		switch (buttons[i].id) {
-			case "buttonON":
+			case "buttonOnOff":
 				buttons[i].addEventListener("click", function() {
-					set_on_off(true);
-					return true;
-				});
-				break;
-			case "buttonOFF":
-				buttons[i].addEventListener("click", function() {
-					set_on_off(false);
-					return true;
+					toggle_on_off(function(isOn) {
+						update_colors(isOn);
+						update_button_text(isOn);
 					});
+				});
 				break;
 			case "buttonQ":
 				buttons[i].addEventListener("click", set_quality);
@@ -28,7 +24,10 @@ function run_on_init() {
 		}
 	}
 	
-	get_on_off(function(isOn) {update_colors(isOn)});
+	get_on_off(function(isOn) {
+		update_colors(isOn);
+		update_button_text(isOn);
+	});
 }
 
 
@@ -49,33 +48,40 @@ function update_colors(isOn) {
 }
 
 
-function set_on_off (isOn) {
-	if (isOn) {
-		chrome.runtime.sendMessage({message: "turned_on"});
-	}
-	update_colors(isOn);
-	chrome.storage.sync.set({OnOffToggle: isOn }, function() {
-		console.log('OnOff is set to ' + isOn);
+function toggle_on_off(callback) {
+	get_on_off(function(isOn) {
+		isOn = !isOn;
+		if (isOn) {
+			chrome.runtime.sendMessage({message: "turned_on"});
+		}
+		callback(isOn);
+		chrome.storage.sync.set({OnOffToggle: isOn }, function() {
+			console.log('OnOff is set to ' + isOn);
+		});
 	});
 }
 
-function set_quality () {
-	get_on_off(function(isOn) {
-		if (!isOn) return;
-		setTimeout(function() {window.location.href="popup_new.html";}, 200);
-	});
+
+function update_button_text(isOn) {
+	let button = document.getElementById("buttonOnOff");
+	button.innerHTML = isOn ? "<span>On </span>" : "<span>Off </span>";
+}
+
+
+function set_quality() {
+	// quality setting can be changed at all times, does not matter if it's on or off
+	setTimeout(function() {window.location.href="popup_new.html";}, 200);
 	return true;
 }
 
 function get_on_off(callback) {
 	chrome.storage.sync.get('OnOffToggle', function(res) {
-		update_colors(res.OnOffToggle);
 		console.log('Value of OnOffToggle is ' + res.OnOffToggle);
 		callback(res.OnOffToggle);
 	});
 }
 
-function surprise () {
+function surprise() {
 	get_on_off(function(isOn) {
 		if (!isOn) return;
 		surprise_receive();

@@ -38,6 +38,7 @@ function got_message_background(request, sender, sendResponse) {
 
 
 function when_installed(details) {
+    // set defaults
     let quality = "hd1080"
     chrome.storage.sync.get('Quality', function(res) {
         if (!res.Quality) {
@@ -72,7 +73,7 @@ function when_installed(details) {
 
 
 function setCurrentUrl(url) {
-    chrome.storage.local.set({ "current_url": url });
+    chrome.storage.local.set({"current_url": url });
 }
 
 function injectStuff_mv3(quality, tabId) {
@@ -88,14 +89,11 @@ function injectStuff_mv3(quality, tabId) {
 
 function change_quality_help(quality) {
     let players = document.querySelectorAll('.html5-video-player');
-    // bug where there are multiple players,
-    // but the first one is a preview player (when you hover over a video) and is very limited,
-    // second one is the one that is the actual video
+    // youtbe has multiple players: video and preview
     if (players.length === 0) {
         console.log("No player found, quality could not be changed");
         return;
     }
-    // instead of only the sedond one, we want to change all of the qualities, so future changes are not needed
     if (quality) {
         for (let player of players) {
             player.setPlaybackQualityRange(quality);
@@ -128,8 +126,6 @@ function change_quality(tabId) {
     get_status_on_off(function(isOn) {
         if (isOn) {
             get_quality(function(quality) {
-                // injecting change_quality_help here
-                //injectStuff(quality);
                 injectStuff_mv3(quality, tabId);
             });
         }
